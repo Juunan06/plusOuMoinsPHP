@@ -11,6 +11,7 @@ function replay(){
 	$nbrEssais = 0;
 	$nbrMystere = -1;
 	$win = 0;
+	$message = "Début de partie, faites un choix !";
 	//$lastChoice ="Le joueur n'a pas encore fait de choix";
 	upLastChoice("Le joueur n'a pas encore fait de choix");
 	session_start();
@@ -56,7 +57,10 @@ if (empty($_SESSION['nbrMystere'])){
 	if ( isset($_POST['userNbr'])) {
 		//echo "/----- SESSION : ".var_dump($_SESSION)."<br />";
 		$userNbr = htmlspecialchars($_POST['userNbr']); // On récupère le choix de l'utilisateur
-		$message = ''; // On set le message à afficher à vide
+		if ($message != "Début de partie, faites un choix !"){
+			$message = ''; // On set le message à afficher à vide
+		}
+		
 		
 		// Si l'utilisateur à bien rentré un chiffre
 		if (is_numeric($userNbr)){
@@ -108,7 +112,7 @@ if (empty($_SESSION['nbrMystere'])){
 			$message = "T'es con, tu n'as pas rentré un chiffre !";
 		}
 	}else{
-		$message .= "T'es con, tu n'as rien rentré !";
+		$message .= "Début de partie, faites un choix !";
 		$userNbr = '';
 		upLastChoice($_SESSION['lastChoice']);
 	}	
@@ -195,6 +199,7 @@ if (empty($_SESSION['nbrMystere'])){
 			******************************************<br />
 			<strong>Var Dump $_REQUEST :</strong>
 			<?php var_dump($_REQUEST) ?><br />
+			Lien pour le code : <a href="https://github.com/Juunan06/plusOuMoinsPHP" target="_blank">https://github.com/Juunan06/plusOuMoinsPHP</a>
 		</div>
 
 		
