@@ -1,12 +1,5 @@
 <?php
 session_start();
-$win = 0;
-$message = "";
-$nbrMystere = NULL;
-$userNbr = NULL;
-$nbrEssais = 0;
-$differencePlus = NULL;
-$differenceMoins = NULL;
 
 /**
 * Fonction replay() : permet de relancer la partie, que ce soit en cours de jeu ou si le joueur gagne
@@ -15,61 +8,22 @@ function replay(){
 	unset($_SESSION);
 	unset($_REQUEST);
 	session_destroy();
-	$win = 0;
-	$nbrMystere = NULL;
-	$userNbr = NULL;
 	$nbrEssais = 0;
-	$differencePlus = NULL;
-	$differenceMoins = NULL;
+	$nbrMystere = -1;
+	$win = 0;
 	$message = "Début de partie, faites un choix !";
 	//$lastChoice ="Le joueur n'a pas encore fait de choix";
+	upLastChoice("Le joueur n'a pas encore fait de choix");
 	session_start();
 }
 
 /**
-* isLogicMoins() vérifie si le choix de l'utilisateur est logique dans le cas où il rentre un nombre inférieur au nombre mystère
-*@param $userNbr         int Choix de l'utilisateur
-*@param $differenceMoins int La différence lorsque le joueur était en dessous et au plus proche du nombre mystère
-*@param $nbrMystere      int Le nombre mystère de la partie
+* Fonction upLastChoice() : permet de mettre à jour la variable qui contient le choix du joueur lors du dernier coup
+* @param mixed indique la valeur que l'on souhaite donner au dernier coup du joueur
 */
-function isLogicMoins($userNbr,$differenceMoins,$nbrMystere){
-	global $differenceMoins, $message;	
-	if ($differenceMoins == NULL){
-		$differenceMoins = $nbrMystere - $userNbr;
-		$message = "Le nombre mystère est plus GRAND !";
-	}else{
-		
-		if ($differenceMoins < ($nbrMystere - $userNbr)){
-			$message = "Ton choix n'est pas logique, tu avais rentré ". ((-1)*($differenceMoins - $nbrMystere)) . " et c'était déjà trop petit !";
-		}else{
-			
-			$differenceMoins = $nbrMystere - $userNbr;
-			$message = "Le nombre mystère est plus GRAND !";
-		}
-	}
-
-}
-
-/**
-* isLogicPlus() vérifie si le choix de l'utilisateur est logique dans le cas où il rentre un nombre inférieur au nombre mystère
-*@param $userNbr         int Choix de l'utilisateur
-*@param $differencePlus  int La différence lorsque le joueur était en dessus et au plus proche du nombre mystère
-*@param $nbrMystere      int Le nombre mystère de la partie
-*/
-function isLogicPlus($userNbr,$differencePlus,$nbrMystere){
-	global $differencePlus, $message;
-	if ($differencePlus == NULL){
-		$differencePlus     = $nbrMystere - $userNbr;
-		$message            = "Le nombre mystère est plus PETIT !";
-	}else{
-		if ($differencePlus > ($nbrMystere - $userNbr)){
-			$message            = "Ton choix n'est pas logique, tu avais rentré ". ((-1)*($differencePlus - $nbrMystere)) . " et c'était déjà trop grand !";
-		}else{
-			$differencePlus     = $nbrMystere - $userNbr;
-			$message            = "Le nombre mystère est plus PETIT !";
-		}
-	}
-
+function upLastChoice($newChoice){
+	$lastChoice = $newChoice;
+	$_SESSION['lastChoice'] = $newChoice;
 }
 
 // Si le bouton Réinitialiser est cliqué
@@ -80,68 +34,92 @@ if ( isset($_POST['replay']) && !empty($_POST['replay']) ){
 // Lors de l'arrivé sur la page ou après appuie du bouton de reset
 if (empty($_SESSION['nbrMystere'])){
 
-	$win = 0;
-	$nbrMystere = rand(0,1000);
-	$userNbr = NULL;
-	$nbrEssais = 0;
-	$differencePlus = NULL;
-	$differenceMoins = NULL;
+	$_SESSION['nbrMystere'] = rand(0,1000);
+	$_SESSION['essais'] = 0;
+	$nbrMystere = $_SESSION['nbrMystere'];
+	$nbrEssais = $_SESSION['essais'];
 	$message = "Début de partie, faites un choix !";
-	$_SESSION['nbrMystere'] = $nbrMystere;
-	$_SESSION['nbrEssais'] = $nbrEssais;
-	$_SESSION['diffPlus'] = $differencePlus;
-	$_SESSION['diffMoins'] = $differenceMoins;
+	$lastChoice ="Le joueur n'a pas encore fait de choix";
+	$userNbr = NULL;
+	$win = 0;
 
 }else{ // Si la partie est déjà initialisée
+	$win = 0;
 	$nbrMystere = $_SESSION['nbrMystere'];
-	$nbrEssais = $_SESSION['nbrEssais'];
-	$differencePlus = $_SESSION['diffPlus']; 
-	$differenceMoins = $_SESSION['diffMoins'];
+	$nbrEssais = $_SESSION['essais'];
 
+	// On récupère la valeur du dernier coup du joueur en session, si elle existe
+	if (isset($_SESSION['lastChoice'])){
+		$lastChoice = $_SESSION['lastChoice'];
+	}
+
+	// Lorsque l'on clique pour valider son choix
 	if ( isset($_POST['userNbr'])) {
-		if (is_numeric($_POST['userNbr'])) {
-			$userNbr = htmlspecialchars($_POST['userNbr']);
+		//echo "/----- SESSION : ".var_dump($_SESSION)."<br />";
+		$userNbr = htmlspecialchars($_POST['userNbr']); // On récupère le choix de l'utilisateur
+		if ($message != "Début de partie, faites un choix !"){
+			$message = ''; // On set le message à afficher à vide
+		}
+		
+		
+		// Si l'utilisateur à bien rentré un chiffre
+		if (is_numeric($userNbr)){
 			$nbrEssais++;
+			$_SESSION['essais'] = $nbrEssais;
+
+			// On enregistre son choix si le dernier choix enregistrer n'existe pas ou n'est pas numérique
+			if (isset($lastChoice)){
+				if (!is_numeric($lastChoice)){
+					$lastChoice = $userNbr;
+				}
+			}else{
+				$lastChoice = $userNbr;
+			}
+			
 			// On gère les cas en fonction du chiffre rentré par le joueur
 			switch ($userNbr) {
-				case ( ($userNbr == $nbrMystere) && ($userNbr <= 1000)  && ($userNbr >= 0) ): // ==
+				case ( ($userNbr == $nbrMystere) && ($userNbr <= 1000)  && ($userNbr >= 0) ):
 					$message .= "Bravo, tu as trouvé le nombre mystère en ".$nbrEssais." essai(s)";
 					$win = 1; // On arrête la partie
 					break;
-
-				case ( ($userNbr < $nbrMystere) && ($userNbr <= 1000)  && ($userNbr >= 0) ): // >
-
-					isLogicMoins($userNbr,$differenceMoins,$nbrMystere);
-
+				case ( ($userNbr < $nbrMystere) && ($userNbr <= 1000)  && ($userNbr >= 0) ):
+					// Gestion du cas ou le joueur ne fait pas un choix logique
+					if ($lastChoice > $userNbr && $lastChoice < $nbrMystere) {
+						$message .= "T'es vraiment con! Au coup d'avant tu avais mis : ".$lastChoice." et c'était déjà trop petit!<br />";
+					}else{
+						$message .= "";
+					}
+					$message .= "Le nombre mystère est plus GRAND";
 					break;
-
-				case ( ($userNbr > $nbrMystere) && ($userNbr <= 1000)  && ($userNbr >= 0) ): // <
-					
-					isLogicPlus($userNbr,$differencePlus,$nbrMystere);
-
+				case ( ($userNbr > $nbrMystere) && ($userNbr <= 1000)  && ($userNbr >= 0) ):
+					// Gestion du cas ou le joueur ne fait pas un choix logique
+					if ($lastChoice < $userNbr && $lastChoice > $nbrMystere) {
+						$message .= "T'es vraiment con! Au coup d'avant tu avais mis : ".$lastChoice." et c'était déjà trop grand!<br />";
+					}else{
+						$message .= "";
+					}
+					$message .= "Le nombre mystère est plus PETIT";
 					break;
 
 				
-				default: // hors intervalle
+				default:
 					$message .= "T'es con, tu n'as pas rentré un chiffre compris entre 0 et 1000! <br /> Pour la peine je te compte quand même l'essai !";
 					break;
 			}
 
-			// On rentre les valeurs en session
-			$_SESSION['nbrEssais'] = $nbrEssais;
-			$_SESSION['diffPlus'] = $differencePlus;
-			$_SESSION['diffMoins'] = $differenceMoins;
-
-		} else {
-			$message = "Je t'ai demandé de rentrer un chiffre compris entre 0 et 1000 et toi tu rentre : ".htmlspecialchars($_POST['userNbr'])." !";
+			upLastChoice($userNbr); // On met à jour le dernier choix utilisateur
+		}else{
+			$message = "T'es con, tu n'as pas rentré un chiffre !";
 		}
-	
-	
+	}else{
+		$message .= "Début de partie, faites un choix !";
+		$userNbr = '';
+		upLastChoice($_SESSION['lastChoice']);
+	}	
 
-	}
-}	
+}
+
 ?>
-
 <!DOCTYPE html>
 <html lang="fr">
 
@@ -213,15 +191,14 @@ if (empty($_SESSION['nbrMystere'])){
 			<strong>Zone de vérification : (pour debug et test)</strong><br />
 			<strong>Nombre Mystère :</strong> <?php echo $nbrMystere; ?><br />
 			<strong>Choix utilisateur :</strong> <?php echo  ($userNbr != NULL)?$userNbr:'AUCUN'; ?><br />
-			<strong>Différence PLUS:</strong> <?php echo (isset($differencePlus))?$differencePlus:'AUCUN'; ?><br />
-			<strong>Différence MOINS:</strong> <?php echo (isset($differenceMoins))?$differenceMoins:'AUCUN'; ?><br />
+			<strong>Dernier Choix utilisateur :</strong> <?php echo (isset($lastChoice))?$lastChoice:'AUCUN'; ?><br />
 			<strong>Nombre d'essais effectués :</strong> <?php echo $nbrEssais; ?><br />
 			******************************************<br />
 			<strong>Var Dump $_SESSION :</strong>
-			<?php if (isset($_SESSION)){var_dump($_SESSION);}else{echo 'Not available yet';} ?><br />
+			<?php var_dump($_SESSION) ?><br />
 			******************************************<br />
-			<strong>Var Dump $_REQUEST :</strong> 
-			<?php if (isset($_REQUEST)){var_dump($_REQUEST);}else{echo 'Not available yet';} ?><br />
+			<strong>Var Dump $_REQUEST :</strong>
+			<?php var_dump($_REQUEST) ?><br />
 			Lien pour le code : <a href="https://github.com/Juunan06/plusOuMoinsPHP" target="_blank">https://github.com/Juunan06/plusOuMoinsPHP</a>
 		</div>
 
